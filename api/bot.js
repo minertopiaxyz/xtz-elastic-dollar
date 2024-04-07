@@ -9,10 +9,14 @@ const run = async () => {
     const data = await dapp.getCoingeckoData();
     console.log(data);
     if (data.updateOracle) {
-      const tx = await dapp.updateOracle(data.price);
-      tx.wait();
-      console.log('tx: ' + tx.hash);
-      data.txHash = tx.hash;
+      try {
+        const tx = await dapp.updateOracle(data.price);
+        tx.wait();
+        console.log('tx: ' + tx.hash);
+        data.txHash = tx.hash;
+      } catch (err) {
+        data.txError = true;
+      }
     }
     return data;
   } catch (err) {
