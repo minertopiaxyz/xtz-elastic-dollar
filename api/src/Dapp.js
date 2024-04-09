@@ -3,10 +3,10 @@ const ethers = require('ethers').ethers;
 const maxUINT = ethers.constants.MaxUint256;
 
 const CHAIN_NAME = 'ETHERLINK TESTNET';
-const BANK = '0xF92e268F7cC9B6fEEd65E33b80bA8d9ebbAeaC00';
+const BANK = '0xe7242c488C59eF0991Bb5083f74F9d2b99382108';
 const RPC = 'https://node.ghostnet.etherlink.com/';
 const COINGECKO_URL = 'https://api.coingecko.com/api/v3/simple/price?ids=tezos&vs_currencies=usd'
-const BOT_URL = false; // 'https://xtz-elastic-dollar.vercel.app/api/bot';
+const BOT_URL = 'https://xtz-elastic-dollar.vercel.app/api/bot';
 const COINGECKOID1 = 'tezos';
 const COINGECKOID2 = 'usd';
 const CHAIN_ID = '128123';
@@ -199,6 +199,7 @@ module.exports = class Dapp {
     try {
       const url = COINGECKO_URL;
       const res = await axios.get(url);
+      console.log(res.data);
       const price = res.data[COINGECKOID1][COINGECKOID2];
 
       const op = await this.oracle.price();
@@ -222,7 +223,7 @@ module.exports = class Dapp {
 
       return ret;
     } catch (err) {
-
+      console.error(err);
     }
   }
 
