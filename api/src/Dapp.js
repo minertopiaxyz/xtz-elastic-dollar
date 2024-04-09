@@ -1,22 +1,20 @@
-const moment = require('moment');
 const axios = require('axios');
 const ethers = require('ethers').ethers;
 const maxUINT = ethers.constants.MaxUint256;
 
-const config = {
-  '128123': {
-    name: 'ETHERLINK',
-    coinSymbol: 'XTZ',
-    bank: '0x6787fC888702286A4b209b2075B81d901Ae63F6F',
-    rpc: 'https://node.ghostnet.etherlink.com/',
-    coingeckoUrl: 'https://api.coingecko.com/api/v3/simple/price?ids=tezos&vs_currencies=usd'
-  }
-}
-
+const CHAIN_NAME = 'ETHERLINK TESTNET';
+const BANK = '0xF92e268F7cC9B6fEEd65E33b80bA8d9ebbAeaC00';
+const RPC = 'https://node.ghostnet.etherlink.com/';
+const COINGECKO_URL = 'https://api.coingecko.com/api/v3/simple/price?ids=tezos&vs_currencies=usd'
+const BOT_URL = false; // 'https://xtz-elastic-dollar.vercel.app/api/bot';
+const COINGECKOID1 = 'tezos';
+const COINGECKOID2 = 'usd';
 const CHAIN_ID = '128123';
 const ALGOBANK_ABI = require('./abis/AlgoBank.json');
-const ESTOKEN_ABI = require('./abis/esToken.json');
+const ESTOKEN_ABI = require('./abis/ESToken.json');
 const PRICEORACLE_ABI = require('./abis/PriceOracle.json');
+const WTOKEN_ABI = require('./abis/WToken.json');
+const VAULT_ABI = require('./abis/Vault.json');
 
 function wei2eth(wei) {
   return ethers.utils.formatUnits(wei, "ether");
@@ -38,12 +36,15 @@ module.exports = class Dapp {
   async initContracts() {
     const signer = this.SIGNER;
     if (!signer) throw new Error('SIGNER not loaded.');
-    const config = this.CONFIG;
-    this.bank = new ethers.Contract(config.bank, ALGOBANK_ABI, signer);
+    this.bank = new ethers.Contract(BANK, ALGOBANK_ABI, signer);
     const addressToken = await this.bank.token();
     this.token = new ethers.Contract(addressToken, ESTOKEN_ABI, signer);
     const addressOracle = await this.bank.oracle();
     this.oracle = new ethers.Contract(addressOracle, PRICEORACLE_ABI, signer);
+    const addressWToken = await this.bank.wToken();
+    this.wtoken = new ethers.Contract(addressWToken, WTOKEN_ABI, signer);
+    const addressVault = await this.bank.vault();
+    this.vault = new ethers.Contract(addressVault, VAULT_ABI, signer);
   }
 
   async loadMetamask() {
@@ -60,7 +61,6 @@ module.exports = class Dapp {
     this.PROVIDER = new ethers.providers.Web3Provider(window.ethereum);
     this.SIGNER = this.PROVIDER.getSigner();
     this.USER_ADDRESS = await this.SIGNER.getAddress();
-    this.CONFIG = config[chainId];
     return this.USER_ADDRESS;
   }
 
@@ -72,8 +72,7 @@ module.exports = class Dapp {
       this.RANDOM_WALLET = true;
     }
     this.CHAIN_ID = CHAIN_ID;
-    this.CONFIG = config[CHAIN_ID];
-    this.PROVIDER = new ethers.providers.JsonRpcProvider(this.CONFIG.rpc);
+    this.PROVIDER = new ethers.providers.JsonRpcProvider(RPC);
     this.SIGNER = new ethers.Wallet(pk, this.PROVIDER);
     this.USER_ADDRESS = await this.SIGNER.getAddress();
     return this.USER_ADDRESS;
@@ -96,16 +95,12 @@ module.exports = class Dapp {
   }
 
   getChainName() {
-    return this.CONFIG.name;
+    return CHAIN_NAME;
   }
 
   async getChainData() {
     const ret = {};
-    // $EMON total supply: {tokenTotalSupply} unit<br />
-    // contract collateral: {bankCoinBalance} $XTZ<br />
-    // contract collateral in $: {bankCoinBalanceUsd} $<br />
-    // $XTZ contract price: {bankCoinPrice} $<br />
-    // $XTZ coingecko price: {coingeckoPrice} $<br />
+
     const tot = await this.token.totalSupply();
     ret.tokenTotalSupply = wei2eth(tot);
     const bal = await this.PROVIDER.getBalance(this.bank.address);
@@ -113,7 +108,27 @@ module.exports = class Dapp {
     const cnp = await this.bank.coinPrice();
     ret.bankCoinPrice = wei2eth(cnp);
     ret.bankCoinBalanceUsd = Number(ret.bankCoinBalance) * Number(ret.bankCoinPrice);
-    console.log(ret)
+    const data = await this.getCoingeckoData();
+    ret.coingeckoPrice = data.price;
+    ret.rebase = data.rebase;
+
+    const wei = eth2wei('1');
+    const b = await this.bank.coinToToken(wei);
+    const a = (ethers.BigNumber.from(wei)).mul(wei);
+    const r = a.div(b);
+    const to4d = (val) => Math.round(val * 100) / 100;
+
+    const mint1 = Number(wei2eth(r));
+    const mint2 = mint1 * Number(ret.bankCoinPrice);
+    ret.mint1 = to4d(mint1);
+    ret.mint2 = to4d(mint2);
+
+    const c = await this.bank.tokenToCoin(wei);
+    const burn1 = Number(wei2eth(c));
+    const burn2 = burn1 * Number(ret.bankCoinPrice);
+    ret.burn1 = to4d(burn1);
+    ret.burn2 = to4d(burn2);
+
     return ret;
   }
 
@@ -127,6 +142,19 @@ module.exports = class Dapp {
   async mint(amount) {
     const wei = eth2wei(amount);
     const tx = await this.bank.swapCoinToToken({ value: wei })
+    return tx;
+  }
+
+  async tokenToCoin(amount) {
+    const wei = eth2wei(amount);
+    let res = await this.bank.tokenToCoin(wei);
+    res = wei2eth(res);
+    return res;
+  }
+
+  async burn(amount) {
+    const wei = eth2wei(amount);
+    const tx = await this.bank.swapTokenToCoin(wei)
     return tx;
   }
 
@@ -156,32 +184,46 @@ module.exports = class Dapp {
     return tx;
   }
 
-  async getCoingeckoData() {
-    const url = this.CONFIG.coingeckoUrl;
-    console.log(url);
-    const res = await axios.get(url);
-    const price = res.data['tezos']['usd'];
+  async triggerBot() {
+    if (!BOT_URL) return;
 
-    const op = await this.oracle.price();
-    const opPrice = Number(wei2eth(op));
-
-    const bp = await this.bank.coinPrice();
-    const bpPrice = Number(wei2eth(bp));
-
-    const ret = {
-      price, opPrice, bpPrice
+    try {
+      const url = BOT_URL;
+      const res = await axios.get(url);
+      console.log(res.data);
+    } catch (err) {
     }
+  }
 
-    let updateOracle = false;
-    let rebase = false;
+  async getCoingeckoData() {
+    try {
+      const url = COINGECKO_URL;
+      const res = await axios.get(url);
+      const price = res.data[COINGECKOID1][COINGECKOID2];
 
-    if (price !== opPrice) updateOracle = true;
-    else if (opPrice !== bpPrice) rebase = true;
+      const op = await this.oracle.price();
+      const opPrice = Number(wei2eth(op));
 
-    ret.updateOracle = updateOracle;
-    ret.rebase = rebase;
+      const bp = await this.bank.coinPrice();
+      const bpPrice = Number(wei2eth(bp));
 
-    return ret;
+      const ret = {
+        price, opPrice, bpPrice
+      }
+
+      let updateOracle = false;
+      let rebase = false;
+
+      if (price !== opPrice) updateOracle = true;
+      else if (opPrice !== bpPrice) rebase = true;
+
+      ret.updateOracle = updateOracle;
+      ret.rebase = rebase;
+
+      return ret;
+    } catch (err) {
+
+    }
   }
 
   async updateOracle(price) {
@@ -191,7 +233,7 @@ module.exports = class Dapp {
   }
 
   async rebase() {
-    const tx = await this.bank.updateBasePrice();
+    const tx = await this.bank.rebase();
     return tx;
   }
 
