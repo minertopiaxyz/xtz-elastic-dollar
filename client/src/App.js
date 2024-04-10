@@ -3,14 +3,29 @@ import Dapp from './Dapp';
 import { dappReducer, dappInitialState } from './reducer/DappReducer';
 import PopupTx from "./PopupTx";
 import Lib from "./Lib";
+import moment from 'moment';
+import { FaMoneyBillTrendUp } from "react-icons/fa6";
+import { COIN_SYMBOL, TOKEN_SYMBOL, CHAIN_NAME, STAKE_TOKEN, REWARD_TOKEN } from "./Config";
+
 export const DappContext = createContext();
 
-const COIN_SYMBOL = '$XTZ';
-const TOKEN_SYMBOL = '$EM';
-const CHAIN_NAME = 'ETHERLINK TESTNET';
-const STAKE_TOKEN = '$EM-USDT-LP';
-const REWARD_TOKEN = '$EM';
 
+function Loading() {
+  const [counter, setCounter] = useState(0);
+
+  useEffect(() => {
+    const itv2 = setInterval(() => {
+      setCounter(1 + (moment().unix() % 7));
+    }, 1000);
+    return () => clearInterval(itv2);
+  }, []);
+
+  return (
+    <div>
+      Loading{".".repeat(counter)}
+    </div>
+  );
+}
 function App() {
   const [state, dispatch] = useReducer(dappReducer, dappInitialState);
   const [connection, setConnection] = useState('busy');
@@ -23,6 +38,10 @@ function App() {
   const [burnAmount, setBurnAmount] = useState('');
   const [burnResultAmount, setBurnResultAmount] = useState('0.0');
   const [tab, setTab] = useState(0);
+  const [tabMB, setTabMB] = useState(0);
+  const [stakeAmount, setStakeAmount] = useState('');
+  const [unstakeAmount, setUnstakeAmount] = useState('');
+  const [zapInAmount, setZapInAmount] = useState('');
 
   const onMintAmountChange = async (amount) => {
     setMintAmount(amount);
@@ -100,6 +119,124 @@ function App() {
       await tx.wait();
       await refreshData();
       dispatch({ type: 'TX_SUCCESS' });
+    } catch (err) {
+      console.error(err);
+      const errMsg = JSON.stringify(err);
+      dispatch({ type: 'TX_ERROR', txError: errMsg });
+    }
+  }
+
+  const onClaimReward = async () => {
+    try {
+      Lib.openPopupTx();
+      dispatch({ type: 'TX_SHOW' });
+      const tx = await dapp.claimReward();
+      dispatch({ type: 'TX_SET_HASH', txHash: tx.hash });
+      await tx.wait();
+      await refreshData();
+      dispatch({ type: 'TX_SUCCESS' });
+    } catch (err) {
+      console.error(err);
+      const errMsg = JSON.stringify(err);
+      dispatch({ type: 'TX_ERROR', txError: errMsg });
+    }
+  }
+
+  const onUnstake = async () => {
+    const amount = unstakeAmount;
+    try {
+      Lib.openPopupTx();
+      dispatch({ type: 'TX_SHOW' });
+      const tx = await dapp.unstake(amount);
+      dispatch({ type: 'TX_SET_HASH', txHash: tx.hash });
+      await tx.wait();
+      await refreshData();
+      dispatch({ type: 'TX_SUCCESS' });
+      console.log('success');
+    } catch (err) {
+      console.error(err);
+      const errMsg = JSON.stringify(err);
+      dispatch({ type: 'TX_ERROR', txError: errMsg });
+    }
+  }
+
+  const onApprove = async () => {
+    try {
+      Lib.openPopupTx();
+      dispatch({ type: 'TX_SHOW' });
+      const tx = await dapp.approveStakeVault();
+      dispatch({ type: 'TX_SET_HASH', txHash: tx.hash });
+      await tx.wait();
+      await refreshData();
+      dispatch({ type: 'TX_SUCCESS' });
+    } catch (err) {
+      console.error(err);
+      const errMsg = JSON.stringify(err);
+      dispatch({ type: 'TX_ERROR', txError: errMsg });
+    }
+  }
+
+  const onStake = async () => {
+    const amount = stakeAmount;
+    try {
+      Lib.openPopupTx();
+      dispatch({ type: 'TX_SHOW' });
+      const tx = await dapp.stake(amount);
+      dispatch({ type: 'TX_SET_HASH', txHash: tx.hash });
+      await tx.wait();
+      await refreshData();
+      dispatch({ type: 'TX_SUCCESS' });
+      console.log('success');
+    } catch (err) {
+      console.error(err);
+      const errMsg = JSON.stringify(err);
+      dispatch({ type: 'TX_ERROR', txError: errMsg });
+    }
+  }
+
+  // const onGenerateReward = async () => {
+  //   try {
+  //     Lib.openPopupTx();
+  //     dispatch({ type: 'TX_SHOW' });
+  //     const tx = await dapp.generateReward();
+  //     dispatch({ type: 'TX_SET_HASH', txHash: tx.hash });
+  //     await tx.wait();
+  //     await refreshData();
+  //     dispatch({ type: 'TX_SUCCESS' });
+  //     console.log('success');
+  //   } catch (err) {
+  //     console.error(err);
+  //     const errMsg = JSON.stringify(err);
+  //     dispatch({ type: 'TX_ERROR', txError: errMsg });
+  //   }
+  // }
+
+  const onApproveZapIn = async () => {
+    try {
+      Lib.openPopupTx();
+      dispatch({ type: 'TX_SHOW' });
+      const tx = await dapp.approveZapIn();
+      dispatch({ type: 'TX_SET_HASH', txHash: tx.hash });
+      await tx.wait();
+      await refreshData();
+      dispatch({ type: 'TX_SUCCESS' });
+    } catch (err) {
+      console.error(err);
+      const errMsg = JSON.stringify(err);
+      dispatch({ type: 'TX_ERROR', txError: errMsg });
+    }
+  }
+
+  const onZapIn = async () => {
+    const amount = zapInAmount;
+    try {
+      Lib.openPopupTx();
+      dispatch({ type: 'TX_SHOW' });
+      const tx = await dapp.zapIn(amount);
+      dispatch({ type: 'TX_SET_HASH', txHash: tx.hash });
+      await tx.wait();
+      await refreshData();
+      dispatch({ type: 'TX_SUCCESS' });
       console.log('success');
     } catch (err) {
       console.error(err);
@@ -109,34 +246,59 @@ function App() {
   }
 
   let { tokenTotalSupply, bankCoinBalance, bankCoinPrice, bankCoinBalanceUsd, coingeckoPrice, rebase,
-    mint1, mint2, burn1, burn2 } = chainData;
-  let coinWorth = Number(bankCoinPrice) > 0 ? (1 / Number(bankCoinPrice)) : '0.0';
-  coinWorth = Math.floor(coinWorth * 10000) / 10000;
+    mint1, mint2, burn1, burn2, apr, tokenPrice } = chainData;
+  // let coinWorth = Number(bankCoinPrice) > 0 ? (1 / Number(bankCoinPrice)) : '0.0';
+  // coinWorth = Math.floor(coinWorth * 10000) / 10000;
+  apr = Math.round(apr * 10000) / 10000;
+
+  let { ownedStakeToken, stakedToken, unclaimedRewardToken, stakeNeedApprove, zapInNeedApprove } = userData;
 
   let PanelConnected = (
     <div className="bg-base-200 p-4">
-      loading...
+      <Loading />
     </div>
   );
 
   let PanelInfo = null;
+  let PanelTabMintBurn = null;
   let PanelMint = null;
   let PanelBurn = null;
   let PanelStake = null;
+  let PanelZap = null;
+
+  const init = async (dapp) => {
+    try {
+      await dapp.loadMetamask();
+      await dapp.initContracts();
+      const userData = await dapp.getUserData();
+      const chainData = await dapp.getChainData();
+      await dapp.triggerBot();
+      setUserData(userData);
+      setChainData(chainData);
+      setChainName(dapp.getChainName());
+      setConnection('connected');
+    } catch (err) {
+      console.log(err);
+      console.log('metamask error');
+      setConnection('error');
+    }
+  }
 
   if (connection === 'connected') {
     PanelConnected = (
       <div className="bg-base-200 p-4">
         Connected to: {chainName}<br />
-        {COIN_SYMBOL}: {userData?.userETH}<br />
-        {TOKEN_SYMBOL}: {userData?.userToken}
         <p className="w-[80vw] truncate">{userData?.userAddress}</p>
+        {COIN_SYMBOL}: {userData?.userETH}<br />
+        {TOKEN_SYMBOL}: {userData?.userToken}<br />
+        {TOKEN_SYMBOL} CA: {userData?.tokenAddress}
       </div>
     );
 
     PanelInfo = (
-      <div className="bg-base-100 p-4 grid grid-cols-1 gap-2">
+      <div className="w-full p-4 grid grid-cols-1 gap-2">
         <div>
+          <span className="font-bold text-xl">1 {TOKEN_SYMBOL} = {tokenPrice}$</span><br />
           {TOKEN_SYMBOL} total supply: {tokenTotalSupply}<br />
           algobank collateral: {bankCoinBalance} {COIN_SYMBOL}<br />
           algobank collateral in $: {bankCoinBalanceUsd} $<br />
@@ -149,8 +311,9 @@ function App() {
       </div>
     );
 
+
     PanelMint = (
-      <div className="p-4 grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 gap-2 py-2">
         <div className="">
           For {mint1} {COIN_SYMBOL} (worth {mint2}$) mint 1 {TOKEN_SYMBOL}
         </div>
@@ -169,7 +332,7 @@ function App() {
     );
 
     PanelBurn = (
-      <div className="p-4 grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 gap-2 py-2">
         <div className="">
           Burn 1 {TOKEN_SYMBOL} for {burn1} {COIN_SYMBOL} (worth {burn2}$)
         </div>
@@ -187,18 +350,35 @@ function App() {
       </div>
     );
 
+    PanelTabMintBurn = (
+      <div className="w-full p-4 grid grid-cols-1 gap-2">
+        <div role="tablist" className="tabs tabs-bordered">
+          <input type="radio" value="tab-0" className="tab" aria-label="Mint"
+            checked={tabMB === 0} onChange={e => e.currentTarget.value === "tab-0" ? setTabMB(0) : setTabMB(1)} />
+          <div role="tabpanel" className="tab-content">
+            {PanelMint}
+          </div>
+          <input type="radio" value="tab-1" className="tab" aria-label="Burn"
+            checked={tabMB === 1} onChange={e => e.currentTarget.value === "tab-1" ? setTabMB(1) : setTabMB(0)} />
+          <div role="tabpanel" className="tab-content">
+            {PanelBurn}
+          </div>
+        </div>
+      </div>
+    );
+
     PanelStake = (
-      <div className="p-4 grid grid-cols-1 gap-2">
+      <div className="w-full p-4 grid grid-cols-1 gap-2">
         <div className="grid grid-cols-1 gap-1">
           <div>
             Stake {STAKE_TOKEN} to earn {REWARD_TOKEN}<br />
-            <span className="font-bold text-xl">APR 12.3%</span><br />
-            Owned: 22 {STAKE_TOKEN}<br />
-            Staked: 33 {STAKE_TOKEN}<br />
-            Reward: 22.3 {REWARD_TOKEN}<br />
+            <span className="font-bold text-xl">APR {apr}%</span><br />
+            Owned: {ownedStakeToken} {STAKE_TOKEN}<br />
+            Staked: {stakedToken} {STAKE_TOKEN}<br />
+            Reward: {unclaimedRewardToken} {REWARD_TOKEN}<br />
             <div className="flex flex-row gap-2">
-              <button className="btn btn-neutral btn-outline btn-sm" onClick={onBurn}>Claim Reward</button>
-              <button className="btn btn-neutral btn-outline btn-sm" onClick={onBurn}>Get LP</button>
+              <button className="btn btn-neutral btn-outline btn-sm" onClick={onClaimReward}>Claim Reward</button>
+              {/* <button className="btn btn-neutral btn-outline btn-sm" onClick={onGenerateReward}>Refresh</button> */}
             </div>
           </div>
 
@@ -209,16 +389,20 @@ function App() {
           <div role="tabpanel" className="tab-content">
             <div className="grid grid-cols-1 gap-2 py-2">
               <div className="">
-                <input type="text" placeholder={"Stake " + TOKEN_SYMBOL} className="input input-bordered w-full"
-                  value={burnAmount} onChange={(e) => onBurnAmountChange(e.target.value)}
+                <input type="number" placeholder={"Stake " + STAKE_TOKEN} className="input input-bordered w-full"
+                  value={stakeAmount} onChange={(e) => setStakeAmount(e.target.value)}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <button className="btn btn-neutral btn-outline w-full" onClick={onBurn}>Approve</button>
+                  <button className="btn btn-neutral btn-outline w-full" onClick={onApprove}
+                    disabled={!stakeNeedApprove}
+                  >Approve</button>
                 </div>
                 <div>
-                  <button className="btn btn-neutral btn-outline w-full" onClick={onBurn}>Stake</button>
+                  <button
+                    disabled={stakeNeedApprove}
+                    className="btn btn-neutral btn-outline w-full" onClick={onStake}>Stake</button>
                 </div>
               </div>
             </div>
@@ -229,63 +413,79 @@ function App() {
             <div className="grid grid-cols-1 gap-2 py-2">
               <div className="">
                 <input type="text" placeholder={"Unstake " + TOKEN_SYMBOL} className="input input-bordered w-full"
-                  value={burnAmount} onChange={(e) => onBurnAmountChange(e.target.value)}
+                  value={unstakeAmount} onChange={(e) => setUnstakeAmount(e.target.value)}
                 />
               </div>
               <div className="">
-                <button className="btn btn-neutral btn-outline w-full" onClick={onBurn}>Unstake</button>
+                <button className="btn btn-neutral btn-outline w-full" onClick={onUnstake}>Unstake</button>
               </div>
             </div>
           </div>
-
-
         </div>
-        
+
 
       </div>
     );
 
+    PanelZap = (
+      <div className="w-full p-4 grid grid-cols-1 gap-2">
+        <div className="">
+          Get {STAKE_TOKEN} by providing liquidity for pair {TOKEN_SYMBOL}/{COIN_SYMBOL} in dex.<br />
+        </div>
+        <div className="">
+          <button className="btn btn-neutral btn-outline btn-sm" onClick={onBurn}>Get LP</button>
+        </div>
+        <div className="">
+          or ZAP {TOKEN_SYMBOL} in to {STAKE_TOKEN}
+        </div>
+        <div className="">
+          <input type="number" placeholder={"Amount " + TOKEN_SYMBOL} className="input input-bordered w-full"
+            value={zapInAmount} onChange={(e) => setZapInAmount(e.target.value)}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <button
+              disabled={!zapInNeedApprove}
+              className="btn btn-neutral btn-outline w-full" onClick={onApproveZapIn}>Approve</button>
+          </div>
+          <div>
+            <button
+              disabled={zapInNeedApprove}
+              className="btn btn-neutral btn-outline w-full" onClick={onZapIn}>ZAP</button>
+          </div>
+        </div>
 
-  } else if (connection === "error") {
-    PanelConnected = (
-      <div className="bg-base-200 p-4">
-        ensure metamask installed,<br />
-        set metamask network to {CHAIN_NAME},<br />
-        and refresh the page
+
       </div>
+    );
+  } else if (connection === "error") {
+
+    PanelConnected = (
+      <div className="bg-base-200 p-4 grid grid-cols-1 gap-2">
+        <div>
+          ensure metamask installed,<br />
+          set metamask network to {CHAIN_NAME},<br />
+          click the button below or refresh the page
+        </div>
+        <div>
+          <button className="btn btn-sm btn-outline" onClick={() => init(dapp)}>Connect</button>
+        </div>
+      </div >
     );
   }
 
   useEffect(() => {
-    const dapp = new Dapp();
-    setDapp(dapp);
-
-    const init = async () => {
-      try {
-        await dapp.loadMetamask();
-        await dapp.initContracts();
-        const userData = await dapp.getUserData();
-        const chainData = await dapp.getChainData();
-        await dapp.triggerBot();
-        setUserData(userData);
-        setChainData(chainData);
-        setChainName(dapp.getChainName());
-        setConnection('connected');
-      } catch (err) {
-        console.log(err);
-        console.log('metamask error');
-        setConnection('error');
-      }
-    }
-
-    init();
+    const DAPP = new Dapp();
+    setDapp(DAPP);
+    init(DAPP);
 
     let busy = false;
     const itv = setInterval(async () => {
       if (!busy) {
         busy = true;
         try {
-          if (dapp) await dapp.triggerBot();
+          if (DAPP) await DAPP.triggerBot();
         } catch (err) {
           console.error(err);
         }
@@ -300,31 +500,64 @@ function App() {
 
   return (
     <DappContext.Provider value={{ state, dispatch }}>
-      <div className="min-h-screen flex justify-center bg-base-300 font-mono text-sm">
+      <div className="min-h-screen flex justify-center bg-gray-500 font-mono text-sm">
         <div className="flex-1 max-w-3xl min-h-screen bg-base-100 flex flex-col">
           <div className="grid grid-cols-2">
-            <div className="col-span-2 p-4 bg-primary">
+            <div className="col-span-2 p-4 py-8 bg-primary text-primary-content">
+              <FaMoneyBillTrendUp size={64} className="text-white" /><br />
               <h1 className="text-3xl font-bold">Elastic Money {TOKEN_SYMBOL}</h1>
-              <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eu.</p>
+              <p>Clutching coins brings only a cold comfort; true wealth has slipped from my grasp.</p>
             </div>
             <div className="col-span-2">
               {PanelConnected}
             </div>
-            <div className="col-span-2">
+            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
+              {connection === 'connected' ? (
+                <div className="p-4">
+                  Inspired by Ampleforth, Elastic Money is a rebase token that aims to be priced at $1 by dynamically readjusting its supply.
+                </div>
+              ) : null}
+            </div>
+            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
               {PanelInfo}
             </div>
-            <div className="col-span-2 md:col-span-1 bg-base-100">
-              {PanelMint}
+            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-200">
+              {PanelTabMintBurn}
             </div>
-            <div className="col-span-2 md:col-span-1 bg-base-100">
-              {PanelBurn}
+            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-200">
+              {connection === 'connected' ? (
+                <div className="p-4">
+                  1 token value is backed by a $0.99 worth of native coin collateral. Elastic Money is minted or burned to maintain a $1 peg to native coin.
+                </div>
+              ) : null}
             </div>
-            <div className="col-span-2 bg-base-200">
+            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-300">
+              {connection === 'connected' ? (
+                <div className="p-4">
+                  Liquidity providers take the biggest risk. To compensate, a staking reward is provided.
+                </div>
+              ) : null}
+            </div>
+            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-300">
+              {PanelZap}
+            </div>
+            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
               {PanelStake}
             </div>
+            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
+              {connection === 'connected' ? (
+                <div className="p-4">
+                  High-risk, high-reward stablecoin. Elastic Money has a built-in mechanism to ensure high yields for stakers.
+                </div>
+              ) : null}
+            </div>
+
           </div>
           <div className="flex-1 bg-base-200">
 
+          </div>
+          <div className="p-4 bg-neutral text-neutral-content">
+            <div>Developed by Raijin for Minertopia Nation</div>
           </div>
         </div>
         <PopupTx />

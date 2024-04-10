@@ -1,20 +1,17 @@
 const axios = require('axios');
 const ethers = require('ethers').ethers;
 const maxUINT = ethers.constants.MaxUint256;
+const config = require('./Config');
 
-const CHAIN_NAME = 'ETHERLINK TESTNET';
-const BANK = '0xe7242c488C59eF0991Bb5083f74F9d2b99382108';
-const RPC = 'https://node.ghostnet.etherlink.com/';
-const COINGECKO_URL = 'https://api.coingecko.com/api/v3/simple/price?ids=tezos&vs_currencies=usd'
-const BOT_URL = 'https://xtz-elastic-dollar.vercel.app/api/bot';
-const COINGECKOID1 = 'tezos';
-const COINGECKOID2 = 'usd';
-const CHAIN_ID = '128123';
+const { CHAIN_NAME, BANK, RPC, COINGECKO_URL, BOT_URL, COINGECKOID1, COINGECKOID2, CHAIN_ID } = config;
+
 const ALGOBANK_ABI = require('./abis/AlgoBank.json');
 const ESTOKEN_ABI = require('./abis/ESToken.json');
 const PRICEORACLE_ABI = require('./abis/PriceOracle.json');
 const WTOKEN_ABI = require('./abis/WToken.json');
 const VAULT_ABI = require('./abis/Vault.json');
+// const ERC20_ABI = require('./abis/ERC20.json');
+const DLPT_ABI = require('./abis/DummyLPToken.json');
 
 function wei2eth(wei) {
   return ethers.utils.formatUnits(wei, "ether");
@@ -34,6 +31,7 @@ module.exports = class Dapp {
   }
 
   async initContracts() {
+    console.log('initContracts..');
     const signer = this.SIGNER;
     if (!signer) throw new Error('SIGNER not loaded.');
     this.bank = new ethers.Contract(BANK, ALGOBANK_ABI, signer);
@@ -45,6 +43,11 @@ module.exports = class Dapp {
     this.wtoken = new ethers.Contract(addressWToken, WTOKEN_ABI, signer);
     const addressVault = await this.bank.vault();
     this.vault = new ethers.Contract(addressVault, VAULT_ABI, signer);
+    const addressStakeToken = await this.vault.stakingToken();
+    this.stakeToken = new ethers.Contract(addressStakeToken, DLPT_ABI, signer);
+
+    console.log({ addressToken });
+    console.log('initContracts done..');
   }
 
   async loadMetamask() {
@@ -99,17 +102,18 @@ module.exports = class Dapp {
   }
 
   async getChainData() {
+    console.log('getChainData..');
     const ret = {};
-
+    const data = await this.getCoingeckoData();
     const tot = await this.token.totalSupply();
     ret.tokenTotalSupply = wei2eth(tot);
     const bal = await this.PROVIDER.getBalance(this.bank.address);
     ret.bankCoinBalance = wei2eth(bal);
     const cnp = await this.bank.coinPrice();
     ret.bankCoinPrice = wei2eth(cnp);
-    ret.bankCoinBalanceUsd = Number(ret.bankCoinBalance) * Number(ret.bankCoinPrice);
-    const data = await this.getCoingeckoData();
-    ret.coingeckoPrice = data.price;
+    ret.coingeckoPrice = data?.price;
+    const price = ret.coingeckoPrice ? Number(ret.coingeckoPrice) : Number(ret.bankCoinPrice);
+    ret.bankCoinBalanceUsd = Number(ret.bankCoinBalance) * price;
     ret.rebase = data.rebase;
 
     const wei = eth2wei('1');
@@ -119,7 +123,7 @@ module.exports = class Dapp {
     const to4d = (val) => Math.round(val * 100) / 100;
 
     const mint1 = Number(wei2eth(r));
-    const mint2 = mint1 * Number(ret.bankCoinPrice);
+    const mint2 = mint1 * price;
     ret.mint1 = to4d(mint1);
     ret.mint2 = to4d(mint2);
 
@@ -128,6 +132,25 @@ module.exports = class Dapp {
     const burn2 = burn1 * Number(ret.bankCoinPrice);
     ret.burn1 = to4d(burn1);
     ret.burn2 = to4d(burn2);
+
+    ret.tokenPrice = burn2;
+
+    // apr
+    let yrps = await this.vault.calcYRPS('7');
+    yrps = Number(wei2eth(yrps));
+
+    let wtPrice = await this.wtoken.getPrice();
+    wtPrice = Number(wei2eth(wtPrice));
+
+    const yRewardUSD = yrps * wtPrice;
+    const apr = yRewardUSD * 100;
+
+    // 1 stake token assume to be 1$
+    // reward token in $
+    ret.apr = apr;
+
+    console.log({ yrps, wtPrice, yRewardUSD, apr });
+    console.log('getChainData done..');
 
     return ret;
   }
@@ -162,11 +185,24 @@ module.exports = class Dapp {
     const userAddress = this.USER_ADDRESS;
     const userETH = await this.PROVIDER.getBalance(userAddress);
     const userToken = await this.token.balanceOf(userAddress);
-    return {
+    const ownedStakeToken = await this.stakeToken.balanceOf(userAddress);
+    const stakedToken = await this.vault.balanceOf(userAddress);
+    const unclaimedRewardToken = await this.vault.unclaimedRewardESToken(userAddress);
+    const stakeNeedApprove = await this.needApprove(this.stakeToken, this.vault.address);
+    const zapInNeedApprove = await this.needApprove(this.token, this.stakeToken.address);
+    const ret = {
+      tokenAddress: this.token.address,
       userAddress,
       userETH: wei2eth(userETH),
-      userToken: wei2eth(userToken)
+      userToken: wei2eth(userToken),
+      ownedStakeToken: wei2eth(ownedStakeToken),
+      stakedToken: wei2eth(stakedToken),
+      unclaimedRewardToken: wei2eth(unclaimedRewardToken),
+      stakeNeedApprove,
+      zapInNeedApprove
     }
+    console.log(ret);
+    return ret;
   }
 
   async needApprove(tokenSC, spenderAddress) {
@@ -235,6 +271,42 @@ module.exports = class Dapp {
 
   async rebase() {
     const tx = await this.bank.rebase();
+    return tx;
+  }
+
+  async claimReward() {
+    const tx = await this.vault.claimESToken();
+    return tx;
+  }
+
+  async unstake(amount) {
+    const amountWei = eth2wei('' + amount);
+    const tx = await this.vault.unstake(amountWei);
+    return tx;
+  }
+
+  async approveStakeVault() {
+    return await this.approve(this.stakeToken, this.vault.address);
+  }
+
+  async stake(amount) {
+    const amountWei = eth2wei('' + amount);
+    const tx = await this.vault.stake(amountWei);
+    return tx;
+  }
+
+  async generateReward() {
+    const tx = await this.bank.generateReward();
+    return tx;
+  }
+
+  async approveZapIn() {
+    return await this.approve(this.token, this.stakeToken.address);
+  }
+
+  async zapIn(amount) {
+    const amountWei = eth2wei('' + amount);
+    const tx = await this.stakeToken.zapIn(amountWei);
     return tx;
   }
 
