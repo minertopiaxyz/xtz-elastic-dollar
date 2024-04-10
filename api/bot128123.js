@@ -1,4 +1,4 @@
-require('dotenv').config();
+// require('dotenv').config();
 const Config = require('./src/Config.js');
 Config.set('128123');
 
