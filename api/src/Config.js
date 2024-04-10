@@ -36,7 +36,7 @@ function set(chainId) {
 }
 
 function get() {
-  ret = config[CHAIN_ID];
+  const ret = config[CHAIN_ID];
   if (!ret) throw new Error('invalid config');
   return ret;
 }
