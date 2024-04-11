@@ -1,22 +1,25 @@
 import { createWeb3Modal, defaultConfig } from '@web3modal/ethers5/react';
+import Config from './Config';
 import App from './App';
+
+const { CHAIN_ID, GAS, RPC, CHAIN_NAME, EXPLORER_URL } = Config.get();
 // 1. Get projectId
 const projectId = 'de1337b51d9e5820befc1a6f6c282cdf';
 
 // 2. Set chains
 const mainnet = {
-  chainId: 128123,
-  name: 'Etherlink Testnet',
-  currency: 'XTZ',
-  explorerUrl: 'https://testnet-explorer.etherlink.com',
-  rpcUrl: 'https://node.ghostnet.etherlink.com'
+  chainId: Number(CHAIN_ID),
+  name: CHAIN_NAME,
+  currency: GAS,
+  explorerUrl: EXPLORER_URL,
+  rpcUrl: RPC
 }
 
 // 3. Create a metadata object
 const metadata = {
   name: 'Elastic Money',
-  description: 'My Web3',
-  url: 'http://localhost:3000', // origin must match your domain & subdomain
+  description: 'Elastic Money',
+  url: 'https://xtz-elastic-dollar.vercel.app', // origin must match your domain & subdomain
   icons: []
 }
 
