@@ -5,10 +5,13 @@ import PopupTx from "./PopupTx";
 import Lib from "./Lib";
 import moment from 'moment';
 import { FaMoneyBillTrendUp } from "react-icons/fa6";
-import { COIN_SYMBOL, TOKEN_SYMBOL, CHAIN_NAME, STAKE_TOKEN, REWARD_TOKEN } from "./Config";
+import Config from "./Config";
+import { useWeb3ModalProvider, useWeb3ModalAccount } from '@web3modal/ethers5/react';
+import { ethers } from 'ethers';
 
 export const DappContext = createContext();
 
+const { COIN_SYMBOL, TOKEN_SYMBOL, CHAIN_NAME, STAKE_TOKEN, REWARD_TOKEN, CHAIN_ID } = Config.get();
 
 function Loading() {
   const [counter, setCounter] = useState(0);
@@ -26,7 +29,12 @@ function Loading() {
     </div>
   );
 }
-function App() {
+function TheApp() {
+  const { chainId, isConnected } = useWeb3ModalAccount();
+  const { walletProvider } = useWeb3ModalProvider();
+
+  const connected = (isConnected && chainId === Number(CHAIN_ID) && walletProvider);
+
   const [state, dispatch] = useReducer(dappReducer, dappInitialState);
   const [connection, setConnection] = useState('busy');
   const [dapp, setDapp] = useState(null);
@@ -253,12 +261,9 @@ function App() {
 
   let { ownedStakeToken, stakedToken, unclaimedRewardToken, stakeNeedApprove, zapInNeedApprove } = userData;
 
-  let PanelConnected = (
-    <div className="bg-base-200 p-4">
-      <Loading />
-    </div>
-  );
 
+
+  let PanelConnected = null;
   let PanelInfo = null;
   let PanelTabMintBurn = null;
   let PanelMint = null;
@@ -266,23 +271,11 @@ function App() {
   let PanelStake = null;
   let PanelZap = null;
 
-  const init = async (dapp) => {
-    try {
-      await dapp.loadMetamask();
-      await dapp.initContracts();
-      const userData = await dapp.getUserData();
-      const chainData = await dapp.getChainData();
-      await dapp.triggerBot();
-      setUserData(userData);
-      setChainData(chainData);
-      setChainName(dapp.getChainName());
-      setConnection('connected');
-    } catch (err) {
-      console.log(err);
-      console.log('metamask error');
-      setConnection('error');
-    }
-  }
+  PanelConnected = (
+    <div className="bg-base-200 p-4">
+      <Loading />
+    </div>
+  );
 
   if (connection === 'connected') {
     PanelConnected = (
@@ -291,7 +284,7 @@ function App() {
         <p className="w-[80vw] truncate">{userData?.userAddress}</p>
         {COIN_SYMBOL}: {userData?.userETH}<br />
         {TOKEN_SYMBOL}: {userData?.userToken}<br />
-        {TOKEN_SYMBOL} CA: {userData?.tokenAddress}
+        <p className="w-[80vw] truncate">{TOKEN_SYMBOL} CA: {userData?.tokenAddress}</p>
       </div>
     );
 
@@ -377,7 +370,9 @@ function App() {
             Staked: {stakedToken} {STAKE_TOKEN}<br />
             Reward: {unclaimedRewardToken} {REWARD_TOKEN}<br />
             <div className="flex flex-row gap-2">
-              <button className="btn btn-neutral btn-outline btn-sm" onClick={onClaimReward}>Claim Reward</button>
+              <button className="btn btn-neutral btn-outline btn-sm" onClick={onClaimReward}
+                disabled={!(Number(unclaimedRewardToken) > 0)}
+              >Claim Reward</button>
               {/* <button className="btn btn-neutral btn-outline btn-sm" onClick={onGenerateReward}>Refresh</button> */}
             </div>
           </div>
@@ -433,7 +428,7 @@ function App() {
           Get {STAKE_TOKEN} by providing liquidity for pair {TOKEN_SYMBOL}/{COIN_SYMBOL} in dex.<br />
         </div>
         <div className="">
-          <button className="btn btn-neutral btn-outline btn-sm" onClick={onBurn}>Get LP</button>
+          <button className="btn btn-neutral btn-outline btn-sm" onClick={() => console.log('click')} disabled={true}>Get LP</button>
         </div>
         <div className="">
           or ZAP {TOKEN_SYMBOL} in to {STAKE_TOKEN}
@@ -460,32 +455,47 @@ function App() {
       </div>
     );
   } else if (connection === "error") {
-
     PanelConnected = (
       <div className="bg-base-200 p-4 grid grid-cols-1 gap-2">
         <div>
           ensure metamask installed,<br />
           set metamask network to {CHAIN_NAME},<br />
-          click the button below or refresh the page
-        </div>
-        <div>
-          <button className="btn btn-sm btn-outline" onClick={() => init(dapp)}>Connect</button>
+          refresh the page
         </div>
       </div >
     );
   }
 
-  useEffect(() => {
-    const DAPP = new Dapp();
-    setDapp(DAPP);
-    init(DAPP);
+  // useEffect(() => {
+  //   const DAPP = new Dapp();
+  //   setDapp(DAPP);
+  //   init(DAPP);
 
+  //   let busy = false;
+  //   const itv = setInterval(async () => {
+  //     if (!busy) {
+  //       busy = true;
+  //       try {
+  //         if (DAPP) await DAPP.triggerBot();
+  //       } catch (err) {
+  //         console.error(err);
+  //       }
+  //       busy = false;
+  //     }
+  //   }, 60000);
+
+  //   return () => {
+  //     clearInterval(itv);
+  //   }
+  // }, []);
+
+  useEffect(() => {
     let busy = false;
     const itv = setInterval(async () => {
       if (!busy) {
         busy = true;
         try {
-          if (DAPP) await DAPP.triggerBot();
+          if (connected && dapp) await dapp.triggerBot();
         } catch (err) {
           console.error(err);
         }
@@ -498,66 +508,98 @@ function App() {
     }
   }, []);
 
+  const init = async (_walletProvider) => {
+    const ethersProvider = new ethers.providers.Web3Provider(_walletProvider);
+    const signer = await ethersProvider.getSigner();
+    // const address = await signer.getAddress();
+
+    const DAPP = new Dapp();
+    setDapp(DAPP);
+
+    try {
+      await DAPP.loadSigner(signer);
+      await DAPP.initContracts();
+      const userData = await DAPP.getUserData();
+      const chainData = await DAPP.getChainData();
+      await DAPP.triggerBot();
+      setUserData(userData);
+      setChainData(chainData);
+      setChainName(DAPP.getChainName());
+      setConnection('connected');
+    } catch (err) {
+      console.log(err);
+      console.log('metamask error');
+      setConnection('error');
+    }
+  }
+
+  useEffect(() => {
+    if (connected) {
+      init(walletProvider);
+    }
+  }, [connected, walletProvider]);
+
   return (
     <DappContext.Provider value={{ state, dispatch }}>
       <div className="min-h-screen flex justify-center bg-gray-500 font-mono text-sm">
+
         <div className="flex-1 max-w-3xl min-h-screen bg-base-100 flex flex-col">
+          <div className="bg-neutral text-neutral-content flex justify-end">
+            <w3m-button />
+          </div>
           <div className="grid grid-cols-2">
-            <div className="col-span-2 p-4 py-8 bg-primary text-primary-content">
-              <FaMoneyBillTrendUp size={64} className="text-white" /><br />
-              <h1 className="text-3xl font-bold">Elastic Money {TOKEN_SYMBOL}</h1>
-              <p>Clutching coins brings only a cold comfort; true wealth has slipped from my grasp.</p>
+            <div className="col-span-2 p-4 py-8 bg-primary text-primary-content flex flex-row justify-between items-center">
+              <div>
+                <h1 className="text-3xl font-bold">Elastic Money {TOKEN_SYMBOL}</h1>
+                <p>Clutching coins brings only a cold comfort; true wealth has slipped from my grasp.</p>
+              </div>
+              <FaMoneyBillTrendUp className="text-white w-[72px] h-[72px]" />
             </div>
             <div className="col-span-2">
               {PanelConnected}
             </div>
-            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
-              {connection === 'connected' ? (
+          </div>
+          {connection === 'connected' ? (
+            <div className="grid grid-cols-2">
+              <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
                 <div className="p-4">
                   Inspired by Ampleforth, Elastic Money is a rebase token that aims to be priced at $1 by dynamically readjusting its supply.
                 </div>
-              ) : null}
-            </div>
-            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
-              {PanelInfo}
-            </div>
-            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-200">
-              {PanelTabMintBurn}
-            </div>
-            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-200">
-              {connection === 'connected' ? (
+              </div>
+              <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
+                {PanelInfo}
+              </div>
+              <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-200">
+                {PanelTabMintBurn}
+              </div>
+              <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-200">
                 <div className="p-4">
                   1 token value is backed by a $0.99 worth of native coin collateral. Elastic Money is minted or burned to maintain a $1 peg to native coin.
                 </div>
-              ) : null}
-            </div>
-            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-300">
-              {connection === 'connected' ? (
+              </div>
+              <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-300">
                 <div className="p-4">
                   Liquidity providers take the biggest risk. To compensate, a staking reward is provided.
                 </div>
-              ) : null}
-            </div>
-            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-300">
-              {PanelZap}
-            </div>
-            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
-              {PanelStake}
-            </div>
-            <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
-              {connection === 'connected' ? (
+              </div>
+              <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-300">
+                {PanelZap}
+              </div>
+              <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
+                {PanelStake}
+              </div>
+              <div className="col-span-2 md:col-span-1 min-h-fit md:min-h-[50vh] flex items-center bg-base-100">
                 <div className="p-4">
                   High-risk, high-reward stablecoin. Elastic Money has a built-in mechanism to ensure high yields for stakers.
                 </div>
-              ) : null}
+              </div>
+
             </div>
-
-          </div>
+          ) : null}
           <div className="flex-1 bg-base-200">
-
           </div>
           <div className="p-4 bg-neutral text-neutral-content">
-            <div>Developed by Raijin for Minertopia Nation</div>
+            <div>Developed by Raijin for Hackathon</div>
           </div>
         </div>
         <PopupTx />
@@ -566,4 +608,25 @@ function App() {
   );
 }
 
-export default App;
+// function App() {
+//   const signer = useEthersSigner();
+
+//   const initEthers = async (_signer) => {
+//     console.log('!');
+//     const address = await _signer.getAddress();
+//     console.log(address);
+//   }
+
+//   useEffect(() => {
+//     console.log(signer);
+//     if (signer) initEthers(signer);
+//   }, [signer]);
+
+//   return (
+//     <div>
+//       <ConnectButton />
+//     </div>
+//   );
+// }
+
+export default TheApp;
