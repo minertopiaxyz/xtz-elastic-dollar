@@ -11,7 +11,8 @@ import { ethers } from 'ethers';
 
 export const DappContext = createContext();
 
-const { COIN_SYMBOL, TOKEN_SYMBOL, CHAIN_NAME, STAKE_TOKEN, REWARD_TOKEN, CHAIN_ID } = Config.get();
+const LIST_CHAIN_ID = Config.LIST_CHAIN_ID;
+// const { COIN_SYMBOL, TOKEN_SYMBOL, CHAIN_NAME, STAKE_TOKEN, REWARD_TOKEN, CHAIN_ID } = Config.get();
 
 function Loading() {
   const [counter, setCounter] = useState(0);
@@ -29,11 +30,14 @@ function Loading() {
     </div>
   );
 }
+
 function TheApp() {
   const { chainId, isConnected } = useWeb3ModalAccount();
   const { walletProvider } = useWeb3ModalProvider();
+  const connected = (isConnected && LIST_CHAIN_ID.indexOf(chainId + '') >= 0 && walletProvider);
 
-  const connected = (isConnected && chainId === Number(CHAIN_ID) && walletProvider);
+  const [config, setConfig] = useState(Config.NOT_SET);
+  const { COIN_SYMBOL, TOKEN_SYMBOL, CHAIN_NAME, STAKE_TOKEN, REWARD_TOKEN, CHAIN_ID, EURL } = config;
 
   const [state, dispatch] = useReducer(dappReducer, dappInitialState);
   const [connection, setConnection] = useState('busy');
@@ -511,7 +515,7 @@ function TheApp() {
   const init = async (_walletProvider) => {
     const ethersProvider = new ethers.providers.Web3Provider(_walletProvider);
     const signer = await ethersProvider.getSigner();
-    // const address = await signer.getAddress();
+    setConfig(Config.getByChainId('' + chainId));
 
     const DAPP = new Dapp();
     setDapp(DAPP);
@@ -602,7 +606,7 @@ function TheApp() {
             <div>Developed by Raijin for Scale Web 3 Hackathon</div>
           </div>
         </div>
-        <PopupTx />
+        <PopupTx eurl={EURL} />
       </div >
     </DappContext.Provider>
   );

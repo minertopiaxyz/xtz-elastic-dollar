@@ -1,3 +1,23 @@
+const NOT_SET = {
+  GAS: '',
+  COIN_SYMBOL: '',
+  TOKEN_SYMBOL: '',
+  CHAIN_NAME: '',
+  STAKE_TOKEN: '',
+  REWARD_TOKEN: '',
+  BANK: '',
+  RPC: '',
+  COINGECKO_URL: '',
+  BOT_URL: '',
+  COINGECKOID1: '',
+  COINGECKOID2: '',
+  CHAIN_ID: '',
+  EURL: '',
+  EXPLORER_URL: ''
+};
+
+const LIST_CHAIN_ID = ['128123', '8082'];
+
 const config = {
   '8082': {
     GAS: 'SHM',
@@ -35,19 +55,28 @@ const config = {
   }
 }
 
-let CHAIN_ID = '128123';
+// let CHAIN_ID = '8082';
 
-function set(chainId) {
-  CHAIN_ID = chainId;
-}
+// function set(chainId) {
+//   CHAIN_ID = chainId;
+// }
 
-function get() {
-  const ret = config[CHAIN_ID];
+// function get() {
+//   const ret = config[CHAIN_ID];
+//   if (!ret) throw new Error('invalid config');
+//   return ret;
+// }
+
+function getByChainId(chainId) {
+  const ret = config[chainId];
   if (!ret) throw new Error('invalid config');
   return ret;
 }
 
 module.exports = {
-  set,
-  get
+  // set,
+  // get,
+  NOT_SET,
+  LIST_CHAIN_ID,
+  getByChainId
 }

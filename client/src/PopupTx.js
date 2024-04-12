@@ -3,9 +3,8 @@ import { useContext } from 'react';
 import { DappContext } from './App';
 
 const Config = require('./Config');
-const { EURL } = Config.get();
 
-const PopupTx = () => {
+const PopupTx = ({ eurl }) => {
   const { state } = useContext(DappContext);
 
   const txStatus = state?.txStatus;
@@ -21,7 +20,7 @@ const PopupTx = () => {
   let btnExplorerUrl = '';
   if (txHash && txHash.length > 0) {
     btnExplorerStyle = 'btn';
-    btnExplorerUrl = EURL + txHash;
+    btnExplorerUrl = eurl + txHash;
   }
 
   return (
