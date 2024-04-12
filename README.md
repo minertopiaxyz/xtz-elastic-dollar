@@ -12,8 +12,7 @@ Next problem is the current low yields on stablecoins within DeFi. This make gov
 ### Solution we propose:
 An algorithmic or rebase token, inspired by [Ampleforth](https://www.coingecko.com/en/coins/ampleforth) and [Base Protocol](https://www.coingecko.com/en/coins/base-protocol), elastic money (EM) aimed to be priced as 1$ worth of native coin. We have build the proof of concept and deploy it on testnet.
 
-Check the dapp in [Etherlink Testnet](https://elasticmoney.raijin.tech)
-Check the dapp in [Shardeum Testnet](https://elasticmoney.raijin.tech)
+Check the dapp in [Etherlink Testnet](https://elasticmoney.raijin.tech) or [Shardeum Testnet](https://elasticmoney.raijin.tech)
 
 ## Unique Features
 - Unlike other rebase tokens, EM is backed by $1 worth of a native coin. This means that for every $1 worth of the native coin, you can mint 1 EM. Conversely, burning 1 EM guarantees you $1 worth of the native coin.
@@ -21,7 +20,7 @@ Check the dapp in [Shardeum Testnet](https://elasticmoney.raijin.tech)
 
 ## How To Build
 ### Smart Contract
-1. Enter folder sc
+1. Enter folder contracts
 2. Upload ElasticMoney.sol & DummyLPToken.sol to [Remix](https://remix.ethereum.org)
 3. Compile using solidity 0.8.9 with enable optimization 200
 4. Deploy AlgoBank.sol and write its address
