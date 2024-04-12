@@ -12,8 +12,8 @@ Next problem is the current low yields on stablecoins within DeFi. This make gov
 ### Solution we propose:
 An algorithmic or rebase token, inspired by [Ampleforth](https://www.coingecko.com/en/coins/ampleforth) and [Base Protocol](https://www.coingecko.com/en/coins/base-protocol), elastic money (EM) aimed to be priced as 1$ worth of native coin. We have build the proof of concept and deploy it on testnet.
 
-Check the dapp in [Etherlink Testnet](https://xtz-elastic-dollar.vercel.app)
-Check the dapp in [Shardeum Testnet](https://shm-hackathon.vercel.app)
+Check the dapp in [Etherlink Testnet](https://elasticmoney.raijin.tech)
+Check the dapp in [Shardeum Testnet](https://elasticmoney.raijin.tech)
 
 ## Unique Features
 - Unlike other rebase tokens, EM is backed by $1 worth of a native coin. This means that for every $1 worth of the native coin, you can mint 1 EM. Conversely, burning 1 EM guarantees you $1 worth of the native coin.
