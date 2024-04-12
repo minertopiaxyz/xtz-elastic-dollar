@@ -544,7 +544,7 @@ function TheApp() {
       <div className="min-h-screen flex justify-center bg-gray-500 font-mono text-sm">
 
         <div className="flex-1 max-w-3xl min-h-screen bg-base-100 flex flex-col">
-          <div className="bg-neutral text-neutral-content flex justify-end">
+          <div className="bg-neutral text-neutral-content flex justify-end p-4">
             <w3m-button />
           </div>
           <div className="grid grid-cols-2">
