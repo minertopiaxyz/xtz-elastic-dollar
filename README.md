@@ -1,3 +1,4 @@
+
 # Elastic Money $EM
 
 ## Submission for Scaling Web 3 Hackathon
@@ -11,15 +12,15 @@ Next problem is the current low yields on stablecoins within DeFi. This make gov
 ### Solution we propose:
 An algorithmic or rebase token, inspired by [Ampleforth](https://www.coingecko.com/en/coins/ampleforth) and [Base Protocol](https://www.coingecko.com/en/coins/base-protocol), elastic money (EM) aimed to be priced as 1$ worth of native coin. We have build the proof of concept and deploy it on testnet.
 
-Check the dapp in Etherlink Testnet: https://xtz-elastic-dollar.vercel.app
-Check the dapp in Shardeum Testnet: https://shm-hackathon.vercel.app
+Check the dapp in [Etherlink Testnet](https://xtz-elastic-dollar.vercel.app)
+Check the dapp in [Shardeum Testnet](https://shm-hackathon.vercel.app)
 
 ## Unique Features
 - Unlike other rebase tokens, EM is backed by $1 worth of a native coin. This means that for every $1 worth of the native coin, you can mint 1 EM. Conversely, burning 1 EM guarantees you $1 worth of the native coin.
 - Elastic Money has a built-in protocol to ensure high yields for LP token stakers. This is achieved through a token emission event that happens right before a rebase. During the emission, new tokens are minted and distributed to a designated vault. The emission rate is set at 20% annually. Since the rebase happens immediately after the emission, the price of the token is expected to remain around 1$.
 
 ## How To Build
-### Smart Contracts
+### Smart Contract
 1. Enter folder sc
 2. Upload YieldElasticAsset.sol to [Remix](https://remix.ethereum.org)
 3. Compile using solidity 0.8.9 with enable optimization 200
