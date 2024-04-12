@@ -1,9 +1,7 @@
 const axios = require('axios');
 const ethers = require('ethers').ethers;
 const maxUINT = ethers.constants.MaxUint256;
-const config = require('./Config');
-
-const { CHAIN_NAME, BANK, RPC, COINGECKO_URL, BOT_URL, COINGECKOID1, COINGECKOID2, CHAIN_ID } = config.get();
+const Config = require('./Config');
 
 const ALGOBANK_ABI = require('./abis/AlgoBank.json');
 const ESTOKEN_ABI = require('./abis/ESToken.json');
@@ -34,6 +32,7 @@ module.exports = class Dapp {
     console.log('initContracts..');
     const signer = this.SIGNER;
     if (!signer) throw new Error('SIGNER not loaded.');
+    const BANK = this.CONFIG.BANK;
     this.bank = new ethers.Contract(BANK, ALGOBANK_ABI, signer);
     const addressToken = await this.bank.token();
     this.token = new ethers.Contract(addressToken, ESTOKEN_ABI, signer);
@@ -50,40 +49,46 @@ module.exports = class Dapp {
     console.log('initContracts done..');
   }
 
-  async loadMetamask() {
-    if (!window.ethereum) throw new Error('Metamask not installed!!');
-    window.ethereum.on('chainChanged', (_chainId) => window.location.reload());
-    window.ethereum.enable();
-    const connected = window.ethereum.isConnected();
-    if (!connected) throw new Error('Metamask not connected!!');
-    let chainId = await window.ethereum.request({ method: 'eth_chainId' });
-    chainId = Number(chainId) + '';
-    const allowedChainId = [CHAIN_ID];
-    if (allowedChainId.indexOf(chainId) < 0) throw new Error('Metamask on wrong network!!');
-    this.CHAIN_ID = chainId;
-    this.PROVIDER = new ethers.providers.Web3Provider(window.ethereum);
-    this.SIGNER = this.PROVIDER.getSigner();
-    this.USER_ADDRESS = await this.SIGNER.getAddress();
-    return this.USER_ADDRESS;
-  }
+  // async loadMetamask() {
+  //   if (!window.ethereum) throw new Error('Metamask not installed!!');
+  //   window.ethereum.on('chainChanged', (_chainId) => window.location.reload());
+  //   window.ethereum.enable();
+  //   const connected = window.ethereum.isConnected();
+  //   if (!connected) throw new Error('Metamask not connected!!');
+  //   let chainId = await window.ethereum.request({ method: 'eth_chainId' });
+  //   chainId = Number(chainId) + '';
+  //   const allowedChainId = [CHAIN_ID];
+  //   if (allowedChainId.indexOf(chainId) < 0) throw new Error('Metamask on wrong network!!');
+  //   this.CHAIN_ID = chainId;
+  //   this.PROVIDER = new ethers.providers.Web3Provider(window.ethereum);
+  //   this.SIGNER = this.PROVIDER.getSigner();
+  //   this.USER_ADDRESS = await this.SIGNER.getAddress();
+  //   return this.USER_ADDRESS;
+  // }
 
   async loadSigner(signer) {
     this.CHAIN_ID = await signer.getChainId();
+
+    // CHAIN_NAME, BANK, RPC, COINGECKO_URL, BOT_URL, COINGECKOID1, COINGECKOID2, CHAIN_ID
+    this.CONFIG = Config.getByChainId('' + this.CHAIN_ID);
+
     this.PROVIDER = signer.provider;
     this.SIGNER = signer;
     this.USER_ADDRESS = await this.SIGNER.getAddress();
     return this.USER_ADDRESS;
   }
 
-  async loadPrivateKey(pk) {
+  async loadPrivateKey(pk, chainId) {
     console.log('** read only wallet **');
+    if (!chainId) throw new Error('no chain id');
     if (!pk) {
       const tmp = ethers.Wallet.createRandom();
       pk = tmp.privateKey;
       this.RANDOM_WALLET = true;
     }
-    this.CHAIN_ID = CHAIN_ID;
-    this.PROVIDER = new ethers.providers.JsonRpcProvider(RPC);
+    this.CHAIN_ID = chainId;
+    this.CONFIG = Config.getByChainId('' + this.CHAIN_ID);
+    this.PROVIDER = new ethers.providers.JsonRpcProvider(this.CONFIG.RPC);
     this.SIGNER = new ethers.Wallet(pk, this.PROVIDER);
     this.USER_ADDRESS = await this.SIGNER.getAddress();
     return this.USER_ADDRESS;
@@ -106,7 +111,7 @@ module.exports = class Dapp {
   }
 
   getChainName() {
-    return CHAIN_NAME;
+    return this.CONFIG.CHAIN_NAME;
   }
 
   async getChainData() {
@@ -261,10 +266,10 @@ module.exports = class Dapp {
   }
 
   async triggerBot() {
-    if (!BOT_URL) return;
+    if (!this.CONFIG || !this.CONFIG.BOT_URL) return;
 
     try {
-      const url = BOT_URL;
+      const url = this.CONFIG.BOT_URL;
       const res = await axios.get(url);
       console.log(res.data);
     } catch (err) {
@@ -273,10 +278,10 @@ module.exports = class Dapp {
 
   async getCoingeckoData() {
     try {
-      const url = COINGECKO_URL;
+      const url = this.CONFIG.COINGECKO_URL;
       const res = await axios.get(url);
       console.log(res.data);
-      const price = res.data[COINGECKOID1][COINGECKOID2];
+      const price = res.data[this.CONFIG.COINGECKOID1][this.CONFIG.COINGECKOID2];
 
       const op = await this.oracle.price();
       const opPrice = Number(wei2eth(op));
@@ -285,7 +290,7 @@ module.exports = class Dapp {
       const bpPrice = Number(wei2eth(bp));
 
       const ret = {
-        url, price, opPrice, bpPrice, CHAIN_ID
+        url, price, opPrice, bpPrice, CHAIN_ID: this.CHAIN_ID
       }
 
       let updateOracle = false;

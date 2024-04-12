@@ -1,6 +1,4 @@
 // require('dotenv').config();
-const Config = require('./src/Config.js');
-Config.set('8082');
 
 const Dapp = require("./src/Dapp.js");
 const PK = process.env.PRIVATEKEY_MAINNET ? process.env.PRIVATEKEY_MAINNET : null;
@@ -25,7 +23,7 @@ const allowCors = fn => async (req, res) => {
 const run = async () => {
   try {
     const dapp = new Dapp();
-    await dapp.loadPrivateKey(PK);
+    await dapp.loadPrivateKey(PK, '8082');
     await dapp.initContracts();
     const data = await dapp.getCoingeckoData();
     console.log(data);
