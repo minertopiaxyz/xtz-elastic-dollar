@@ -22,7 +22,7 @@ Check the dapp in [Shardeum Testnet](https://elasticmoney.raijin.tech)
 ## How To Build
 ### Smart Contract
 1. Enter folder sc
-2. Upload YieldElasticAsset.sol to [Remix](https://remix.ethereum.org)
+2. Upload ElasticMoney.sol & DummyLPToken.sol to [Remix](https://remix.ethereum.org)
 3. Compile using solidity 0.8.9 with enable optimization 200
 4. Deploy AlgoBank.sol and write its address
 5. Go to coingecko or coinmarketcap to get the price of native coin
