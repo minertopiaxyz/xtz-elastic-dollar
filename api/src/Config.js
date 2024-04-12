@@ -1,5 +1,6 @@
 const config = {
   '8082': {
+    GAS: 'SHM',
     COIN_SYMBOL: '$SHM',
     TOKEN_SYMBOL: '$EM',
     CHAIN_NAME: 'SHARDEUM SPHINX 1.X',
@@ -11,9 +12,12 @@ const config = {
     BOT_URL: 'https://xtz-elastic-dollar.vercel.app/api/bot8082',
     COINGECKOID1: 'bitcoin',
     COINGECKOID2: 'usd',
-    CHAIN_ID: '8082'
+    CHAIN_ID: '8082',
+    EURL: 'https://explorer-sphinx.shardeum.org/transaction/',
+    EXPLORER_URL: 'https://explorer-sphinx.shardeum.org'
   },
   '128123': {
+    GAS: 'XTZ',
     COIN_SYMBOL: '$XTZ',
     TOKEN_SYMBOL: '$EM',
     CHAIN_NAME: 'ETHERLINK TESTNET',
@@ -25,11 +29,13 @@ const config = {
     BOT_URL: 'https://xtz-elastic-dollar.vercel.app/api/bot128123',
     COINGECKOID1: 'tezos',
     COINGECKOID2: 'usd',
-    CHAIN_ID: '128123'
+    CHAIN_ID: '128123',
+    EURL: 'https://testnet-explorer.etherlink.com/tx/',
+    EXPLORER_URL: 'https://testnet-explorer.etherlink.com'
   }
 }
 
-let CHAIN_ID = null;
+let CHAIN_ID = '128123';
 
 function set(chainId) {
   CHAIN_ID = chainId;

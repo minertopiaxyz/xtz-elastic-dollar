@@ -67,6 +67,14 @@ module.exports = class Dapp {
     return this.USER_ADDRESS;
   }
 
+  async loadSigner(signer) {
+    this.CHAIN_ID = await signer.getChainId();
+    this.PROVIDER = signer.provider;
+    this.SIGNER = signer;
+    this.USER_ADDRESS = await this.SIGNER.getAddress();
+    return this.USER_ADDRESS;
+  }
+
   async loadPrivateKey(pk) {
     console.log('** read only wallet **');
     if (!pk) {
@@ -284,11 +292,12 @@ module.exports = class Dapp {
       let rebase = false;
 
       if (price !== opPrice) updateOracle = true;
-      else if (opPrice !== bpPrice) rebase = true;
+      if (opPrice !== bpPrice) rebase = true;
 
       ret.updateOracle = updateOracle;
       ret.rebase = rebase;
 
+      console.log(ret);
       return ret;
     } catch (err) {
       console.error('getCoingeckoData error');

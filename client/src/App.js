@@ -599,7 +599,7 @@ function TheApp() {
           <div className="flex-1 bg-base-200">
           </div>
           <div className="p-4 bg-neutral text-neutral-content">
-            <div>Developed by Raijin for Hackathon</div>
+            <div>Developed by Raijin for Scale Web 3 Hackathon</div>
           </div>
         </div>
         <PopupTx />
@@ -607,26 +607,5 @@ function TheApp() {
     </DappContext.Provider>
   );
 }
-
-// function App() {
-//   const signer = useEthersSigner();
-
-//   const initEthers = async (_signer) => {
-//     console.log('!');
-//     const address = await _signer.getAddress();
-//     console.log(address);
-//   }
-
-//   useEffect(() => {
-//     console.log(signer);
-//     if (signer) initEthers(signer);
-//   }, [signer]);
-
-//   return (
-//     <div>
-//       <ConnectButton />
-//     </div>
-//   );
-// }
 
 export default TheApp;

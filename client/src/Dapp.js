@@ -68,7 +68,7 @@ module.exports = class Dapp {
   }
 
   async loadSigner(signer) {
-    this.CHAIN_ID = await signer.getChainId;
+    this.CHAIN_ID = await signer.getChainId();
     this.PROVIDER = signer.provider;
     this.SIGNER = signer;
     this.USER_ADDRESS = await this.SIGNER.getAddress();
