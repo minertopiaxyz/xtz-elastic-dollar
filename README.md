@@ -2,7 +2,7 @@
 
 ## Submission for Scaling Web 3 Hackathon
 
-<video  src="https://www.loom.com/share/23391f5291774c69b64d5c6fc506b59d?sid=c2e96449-c26b-458a-84c2-bb9a761f0def"  width="320"  height="240" controls></video>
+[![Watch the video](https://img.youtube.com/vi/ZgCj2slJZo0/maxresdefault.jpg)](https://youtu.be/ZgCj2slJZo0)
 
 ### Problem statement:
 Stablecoins are crucial for the development of new blockchains. However, expecting established issuers like Tether or Circle to readily deploy their tokens on every new chain is unrealistic.
@@ -12,7 +12,7 @@ Next problem is the current low yields on stablecoins within DeFi. This make gov
 An algorithmic or rebase token, inspired by [Ampleforth](https://www.coingecko.com/en/coins/ampleforth) and [Base Protocol](https://www.coingecko.com/en/coins/base-protocol), elastic money (EM) aimed to be priced as 1$ worth of native coin. We have build the proof of concept and deploy it on testnet.
 
 Check the dapp in Etherlink Testnet: https://xtz-elastic-dollar.vercel.app
-Check the dapp in Shardeum Testnet: https://shm-hackathon.vercel.app/
+Check the dapp in Shardeum Testnet: https://shm-hackathon.vercel.app
 
 ## Unique Features
 - Unlike other rebase tokens, EM is backed by $1 worth of a native coin. This means that for every $1 worth of the native coin, you can mint 1 EM. Conversely, burning 1 EM guarantees you $1 worth of the native coin.
